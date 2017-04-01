@@ -69,7 +69,9 @@ static char sccsid[] = "@(#)cat.c	8.2 (Berkeley) 4/27/95";
 #include <string.h>
 #include <unistd.h>
 #include <stddef.h>
+#include <CoreFoundation/CoreFoundation.h>
 #include <SpeechSynthesis.h>
+#include <AvailabilityMacros.h>
 
 int bflag, eflag, nflag, sflag, tflag, vflag, aflag = 1;
 int rval;
@@ -244,6 +246,32 @@ cook_cat(FILE *fp)
 		err(1, "stdout");
 }
 
+CFStringEncoding encoding = kCFStringEncodingUTF8;
+
+static int
+raw_speak (SpeechChannel channel, const char *str, ssize_t len)
+{
+    int rc = 0;
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_8 && !defined(OLD_STYLE)
+    CFStringRef cfs = CFStringCreateWithCString(NULL, str, encoding);
+    if (cfs) {
+	rc = SpeakCFString(channel, cfs, NULL);
+	if (rc == 0) {
+	    while(SpeechBusy())
+		usleep(250);
+	}
+	CFRelease(cfs);
+    }
+#else
+    rc = SpeakText(channel, str, len);
+    if (rc == 0) {
+	while(SpeechBusy())
+	    usleep(250);
+    }
+#endif
+    return rc;
+}
+
 static void
 raw_cat(int rfd)
 {
@@ -263,14 +291,13 @@ raw_cat(int rfd)
 		if (fstat(wfd, &sbuf))
 			err(1, "%s", filename);
 		bsize = MAX(sbuf.st_blksize, 1024);
-		if ((buf = malloc(bsize)) == NULL)
+		if ((buf = malloc(bsize + 1)) == NULL)
 			err(1, "buffer");
 	}
 	while ((nr = read(rfd, buf, bsize)) > 0) {
-                if ((errno = SpeakText(channel, buf, nr)) != 0)
+		buf[nr] = '\0';	/* NUL terminate our string */
+                if ((errno = raw_speak(channel, buf, nr)) != 0)
                     err(1, "Unable to speak text error: %d", errno);
-                while(SpeechBusy())
-                    usleep(250);
         }
 	if ((errno = DisposeSpeechChannel(channel)) != 0) 
 	    err(1, "Unable to dispose of speech channel error: %d", errno);
