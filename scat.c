@@ -1,7 +1,7 @@
 /*
  * Compile using:
 
- cc -I/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/SpeechSynthesis.framework/Versions/A/Headers -framework ApplicationServices cat.c -o cat
+ cc -I/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/SpeechSynthesis.framework/Versions/A/Headers -framework ApplicationServices scat.c -o scat
 
 */
 
