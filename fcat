@@ -1,0 +1,34 @@
+#!/bin/sh
+
+doit() {
+    echo "$*" | fmt -w10000 | scat
+}
+
+if [ "$1" = "stream" ]; then
+
+    eof=0
+    while [ $eof -eq 0 ]; do
+        break=0
+        full=""
+        last=""
+        while [ $break -eq 0 ]; do
+            read -e line
+            if [ $? -ne 0 -o "$line" = "@eof" ]; then
+                eof=1
+                break=1
+            elif [ "$line" = "" ]; then
+                break=1
+            fi
+            full="$full $line"
+        done
+        doit "$full"
+    done
+
+else
+    input=`cat`
+    2>/dev/null
+    1>/dev/null
+    ( doit "$input" ) < /dev/null > /dev/null 2>&1 &
+fi
+
+exit 0
